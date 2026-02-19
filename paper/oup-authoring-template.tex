@@ -1,0 +1,703 @@
+%%
+%% JRSSA Series A template
+%%
+\documentclass[numsec,webpdf,modern,medium]{oup-authoring-template}
+
+\onecolumn % Single column as required by JRSSA Series A
+
+\graphicspath{{Fig/}}
+
+\theoremstyle{thmstyleone}%
+\newtheorem{theorem}{Theorem}%
+\newtheorem{proposition}{Proposition}%
+\theoremstyle{thmstyletwo}%
+\newtheorem{example}{Example}%
+\newtheorem{remark}{Remark}%
+\theoremstyle{thmstylethree}%
+\newtheorem{definition}{Definition}
+
+% Additional packages for math
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{rotating}
+
+\begin{document}
+
+\journaltitle{Journal of the Royal Statistical Society: Series A (Statistics in Society)}
+\DOI{DOI added during production}
+\copyrightyear{2026}
+\pubyear{2026}
+\vol{XX}
+\issue{x}
+\access{Published: Date added during production}
+\appnotes{Paper}
+
+\firstpage{1}
+
+\title[Decomposing Crowd Wisdom]{Decomposing Crowd Wisdom: Domain-Specific Calibration Dynamics in Prediction Markets}
+
+\author[1,$\ast$]{Nam Anh Le}
+
+\address[1]{\orgdiv{Center for Applied Data Science and Artificial Intelligence}, \orgname{College of Technology, National Economics University}, \orgaddress{\country{Vietnam}}}
+
+\corresp[$\ast$]{Corresponding author. \href{mailto:me@namanhle.com}{me@namanhle.com}}
+
+\received{Date}{0}{Year}
+\revised{Date}{0}{Year}
+\accepted{Date}{0}{Year}
+
+\abstract{Prediction markets are increasingly used as probability forecasting tools, yet their usefulness depends on calibration, specifically whether a contract trading at 70 cents truly implies a 70\% probability. Using 292 million trades across 327,000 binary contracts on Kalshi and Polymarket, this paper shows that calibration is a structured, multidimensional phenomenon. On Kalshi, calibration decomposes into four components (a universal horizon effect, domain-specific biases, domain-by-horizon interactions and a trade-size scale effect) that together explain 87.3\% of calibration variance. The dominant pattern is persistent underconfidence in political markets, where prices are chronically compressed toward 50\%, and this bias generalises across both exchanges. However, the trade-size scale effect, whereby large trades are associated with amplified underconfidence in politics on Kalshi ($\Delta = 0.53$, 95\% confidence interval $[0.29, 0.75]$), does not replicate on Polymarket ($\Delta = 0.11$, $[-0.15, 0.39]$), suggesting platform-specific microstructure. A Bayesian hierarchical model confirms the frequentist decomposition with 96.3\% posterior predictive coverage. Consumers of prediction market prices who treat them as face-value probabilities will systematically misinterpret them, and the direction of misinterpretation depends on what is being predicted, when and by whom.}
+
+\keywords{Bayesian hierarchical models, calibration, crowd wisdom, favourite--longshot bias, information aggregation, prediction markets}
+
+\maketitle
+%% ============================================================
+%% SECTION 1: INTRODUCTION
+%% ============================================================
+\section{Introduction}\label{sec:intro}
+
+On the evening of 5 November 2024, millions of people worldwide refreshed prediction market websites to track the US presidential election. Kalshi and Polymarket showed one candidate trading at 62 cents. News outlets reported this as a ``62\% probability of winning.'' Social media amplified the number. Policymakers cited it. But what does 62 cents actually mean? If the market is well \emph{calibrated}, contracts that trade at 62 cents should correspond to events that occur 62\% of the time. If it is not, the price is a distorted signal, and the millions of people relying on it are being misled.
+
+This paper investigates whether prediction markets are well calibrated, and discovers that the answer is that it depends. It depends on \emph{what} is being predicted, \emph{when} you look, and \emph{who} is trading. These three dimensions (domain, time horizon and trade size) interact in structured, predictable ways that are characterised here using the two largest publicly available prediction market datasets assembled to date.
+
+Prediction markets are financial exchanges where contracts pay \$1 if a specified event occurs and \$0 otherwise \citep{forsythe1992anatomy,rhode2004historical}. A contract trading at price $p \in (0,1)$ is commonly interpreted as encoding a crowd-sourced probability $p$ that the event will happen. This interpretation rests on substantial theoretical work linking market equilibrium prices to aggregated beliefs \citep{wolfers2004prediction,manski2006interpreting,arrow2008promise}. The broader claim that decentralised aggregation mechanisms can outperform centralised experts draws on a long intellectual tradition \citep{galton1907vox,hayek1945use,surowiecki2004wisdom,hong2004groups}. Prediction markets have been deployed for electoral forecasting \citep{forsythe1992anatomy,berg2008prediction,rothschild2009forecasting}, economic policy, pandemic monitoring \citep{hanson2003combinatorial}, and corporate decision-making \citep{cowgill2015corporate}, and their use has surged dramatically in recent years.
+
+The quality of these probability forecasts is assessed through \emph{calibration}, the property that events assigned probability $p$ occur with empirical frequency $p$. A substantial literature examines prediction market calibration, with broadly positive but mixed conclusions. \citet{page2013prediction} found a favourite--longshot bias, an underconfidence pattern where favourites are underpriced and longshots are overpriced (first documented in horse-race betting by \citealp{griffith1949odds}, and formalised by \citealp{ali1977probability}; \citealp{thaler1988anomalies}; \citealp{snowberg2010explaining}), that worsens with time to expiration. \citet{rothschild2009forecasting} found reasonable calibration for US elections but systematic biases at extreme probabilities. \citet{berg2008prediction} showed that the Iowa Electronic Markets outperformed polls (see also \citealp{servanschreiber2004prediction}; \citealp{erikson2008political}; \citealp{leigh2006competing}, for competing assessments). \citet{tetlock2015superforecasting} demonstrated that structured forecasting tournaments can identify ``superforecasters'' whose calibration exceeds both markets and conventional experts. More recently, \citet{liu2024boldness} proposed Bayesian approaches to recalibration, and \citet{satopaa2014combining} developed logit-based methods for combining probability predictions. \citet{dreber2015using} and \citet{camerer2016evaluating} demonstrated that prediction markets can forecast the replicability of scientific findings.
+
+A critical limitation of this literature is the implicit assumption that calibration is a \emph{domain-agnostic} property of the aggregation mechanism. A market forecasting tomorrow's football score and a market forecasting the next president are treated as facing the same calibration challenges. This paper demonstrates that they do not. Using 292 million trades across 327,000 binary contracts spanning six knowledge domains on two major exchanges (Kalshi and Polymarket), calibration is decomposed into four components that together explain 87.3\% of observed calibration variance. Cross-platform validation confirms that the dominant pattern, persistent underconfidence in political markets, generalises beyond any single exchange, while the trade-size scale effect proves platform-specific. The decomposition reveals that crowds are not universally wise or foolish; their forecast quality depends systematically on the epistemic structure of what they are predicting.
+\subsection{Summary of findings}\label{sec:summary}
+
+The central finding is that prediction market calibration decomposes into four interpretable components:
+
+\emph{A universal horizon effect ($\mu$).} All domains share a tendency toward \emph{underconfidence}, with prices compressed toward 50\%, at long time horizons. The mean cell-level calibration slope $\mu(\tau)$, averaged across all domain--size cells at each horizon, rises from 0.99 (within one hour of resolution) to 1.32 (beyond one month). This accounts for 30.2\% of calibration variance. At long horizons, markets systematically understate the probability of the favoured outcome: a contract trading at 70 cents one month out corresponds to a true probability closer to 75\%. This pattern holds on both Kalshi and Polymarket.
+
+\emph{Domain-specific structural biases ($\alpha$).} Politics is the clear outlier, with a domain intercept ($+0.15$) far above all other domains, indicating persistent underconfidence (prices chronically too compressed) at nearly all time horizons. Weather ($-0.09$) and Entertainment ($-0.09$) exhibit the opposite pattern, with prices that are too extreme, reflecting overconfidence. This component accounts for 14.6\% of variance. The political bias is confirmed on Polymarket (mean slope 1.31 vs Kalshi 1.64), establishing it as a structural property of political prediction markets rather than a single-platform artefact.
+
+\emph{Domain-by-horizon interactions ($\beta$).} This is the single largest domain-specific component at 26.0\% of variance. Domains follow genuinely different calibration \emph{trajectories}. Political markets are underconfident at nearly all horizons (slopes 0.93--1.83), with prices persistently too compressed. Sports markets are well calibrated at short-to-medium horizons (slopes 0.90--1.10) but become sharply underconfident beyond one month (slope 1.74). Weather markets are \emph{overconfident} at short horizons (slopes 0.69--0.97), with prices too extreme relative to base rates, before transitioning to underconfidence at longer horizons.
+
+\emph{A trade-size scale effect ($\gamma$).} In political markets, large trades (over 100 contracts) exhibit calibration slopes of 1.74, compared to 1.19 for single-contract trades, a gap of 0.53 (95\% bootstrap CI $[0.29, 0.75]$). Larger trades are associated with \emph{more compressed} prices. In sports markets, no such gap exists ($\Delta = 0.07$, 95\% CI $[-0.07, 0.26]$). This component accounts for 16.5\% of variance. Notably, this effect does not replicate on Polymarket ($\Delta = 0.11$, 95\% CI $[-0.15, 0.39]$), suggesting it reflects Kalshi's specific market microstructure rather than a universal feature of political prediction markets.
+\subsection{Related work}\label{sec:related}
+
+This work connects to several research areas. The prediction market efficiency literature examines whether market prices aggregate dispersed information. \citet{hayek1945use} provided the conceptual foundation; the efficient markets hypothesis \citep{fama1970efficient} and the impossibility of informationally efficient prices under costly information acquisition \citep{grossman1980impossibility} frame the theoretical debate; \citet{plott1988rational} provided early experimental evidence; \citet{wolfers2004prediction} formalised the link between prices and beliefs; \citet{arrow2008promise} argued for broader adoption. \citet{manski2006interpreting} cautioned that prices may not equal mean beliefs under heterogeneous preferences, though \citet{wolfers2006interpreting} showed divergence is typically small. \citet{chen2002information} demonstrated experimentally that information aggregation can be remarkably efficient even with few traders. \citet{ottaviani2008favorite} provided a theoretical foundation for the favourite--longshot bias in parimutuel markets. The decomposition presented here characterises precisely when and where aggregation succeeds or fails, and connects the dominant miscalibration pattern (underconfidence in political markets) directly to Manski's theoretical concern about heterogeneous beliefs compressing prices.
+
+The forecast calibration literature provides the measurement framework for this study. \citet{lichtenstein1982calibration} established the foundations of probability calibration research, building on earlier work by \citet{brier1950verification} on verification of probability forecasts, \citet{murphy1977reliability} on the reliability of probability assessments, \citet{dawid1982well} on the well-calibrated Bayesian, and \citet{degroot1983comparison} on the comparison and combination of forecasters. The logistic recalibration approach \citep{platt1999probabilistic,gneiting2007strictly,winkler1996scoring,bickel2007comparisons} parameterises calibration through a slope in logit space; \citet{ziegel2016coherence} established the theoretical foundations for when such functionals can be consistently estimated from scoring rules. A slope exceeding one, conventionally termed underconfidence or the favourite--longshot bias, indicates that forecasts are insufficiently extreme. \citet{satopaa2014combining} developed a logit model for combining multiple probability predictions. \citet{liu2024boldness} developed Bayesian boldness--recalibration, and \citet{palley2024robust} addressed biased priors in crowd forecasts. The present study extends this work by modelling calibration as a structured function of multiple covariates.
+
+The Bayesian hierarchical modelling literature provides the inferential framework. Hierarchical models for structured data are widely used in epidemiology, ecology and small-area estimation \citep{gelman2013bayesian,hogg2024two,gelman2007data}. Hamiltonian Monte Carlo \citep{neal2011mcmc,betancourt2017conceptual} and the No-U-Turn Sampler \citep{hoffman2014nouturn} have transformed posterior computation, enabling the fitting of complex hierarchical structures with efficient exploration of high-dimensional parameter spaces. Bayesian change-point methods \citep{assareh2013bayesian} and MCMC convergence diagnostics \citep{mengersen1999mcmc,brooks1998general} inform the computational strategy employed here. \citet{tetlock2005expert} and \citet{tetlock2015superforecasting} provide the broader intellectual context for understanding when and why crowd forecasts succeed or fail.
+
+Finally, the scale-dependent miscalibration finding connects to the market microstructure literature. \citet{kyle1985continuous} predicts that large trades convey private information and should improve prices (see also \citealp{glosten1985bid}; \citealp{easley1987price}, on the relationship between trade size and information content). The finding that large trades are associated with \emph{more} compressed prices in political markets suggests a different mechanism whereby opposing large bets from confident partisans cancel each other out, pulling prices toward 50\% rather than toward truth.
+
+The forecasting tournament literature provides an important benchmark. The Good Judgment Project \citep{mellers2014psychological} demonstrated that structured forecasting teams can achieve remarkable accuracy, and \citet{baron2014two} showed that extremising transformations improve calibration, a finding directly relevant to the underconfidence documented here. More recently, \citet{dellavigna2018predicting} used prediction markets to benchmark beliefs about experimental outcomes, and Metaculus and other platforms have generated large-scale calibration datasets \citep{karger2023reciprocal}. This literature establishes that calibration quality depends on the structure of the forecasting problem, a principle formalised here through domain-specific decomposition.
+\subsection{Plan of the paper}\label{sec:plan}
+
+Section~\ref{sec:data} describes the data from both exchanges. Section~\ref{sec:landscape} presents the empirical calibration landscape, establishes three stylised facts, and validates each on Polymarket. Section~\ref{sec:artefacts} diagnoses potential artefacts. Section~\ref{sec:decomposition} introduces the decomposition model and addresses confounding concerns. Section~\ref{sec:bayesian} develops a Bayesian hierarchical model. Section~\ref{sec:discussion} discusses implications. Section~\ref{sec:conclusion} concludes.
+%% ============================================================
+%% SECTION 2: DATA
+%% ============================================================
+\section{Data}\label{sec:data}
+
+\subsection{Data source}\label{sec:datasource}
+
+Data are drawn from two major prediction market exchanges using the pre-collected dataset of \citet{becker2026microstructure}. The primary analysis platform is Kalshi, regulated by the US Commodity Futures Trading Commission (CFTC), which operates a central limit order book for binary event contracts paying \$1.00 if a specified event occurs and \$0.00 otherwise. Contracts trade at prices between \$0.01 and \$0.99. For cross-platform validation, the analysis uses Polymarket, a decentralised exchange operating on the Polygon blockchain, with the same central limit order book mechanism. Unlike Kalshi, Polymarket is unregulated, globally accessible, and allows pseudonymous trading via blockchain wallets. These structural differences (regulatory environment, trader demographics, market mechanism) make Polymarket an informative validation platform: patterns that replicate across both exchanges are unlikely to be platform-specific artefacts.
+
+The Kalshi dataset comprises 64.7 million trades across 210,608 binary contracts, representing approximately 16.8 billion contracts traded, with a cutoff date of 31 December 2025. For each trade, the dataset includes the contract identifier, execution price (in cents), number of contracts, the side taken by the trade initiator, and the execution timestamp (millisecond precision). For each market, the dataset includes the contract identifier, event category, resolution status and outcome (yes or no), and close time. Of the 210,608 markets, 98.6\% of those past their close date have resolved with a definitive yes/no outcome (Table~\ref{tab:kalshi_summary}). The Polymarket dataset comprises 227.6 million trades across 116,000 resolved contracts (61.3 billion contracts traded), with the same cutoff date. Polymarket trade timestamps are derived from Polygon block numbers with approximately 3-hour noise, a limitation that affects the two shortest time bins (Section~\ref{sec:landscape}).
+\subsection{Domain classification}\label{sec:domain}
+
+Kalshi organises contracts into events via a hierarchical ticker structure. Markets are classified into six knowledge domains (see supplementary material for full classification rules): \emph{Sports} (professional leagues including NFL, NBA, MLB and NHL), \emph{Politics} (elections, electoral college outcomes, government policy), \emph{Crypto} (cryptocurrency price contracts), \emph{Finance} (equity indices, interest rates, economic indicators), \emph{Weather} (temperature records, precipitation, natural events) and \emph{Entertainment} (awards, media, culture). The classification uses a deterministic mapping from event ticker prefixes, ensuring reproducibility. For Polymarket, which has no structured ticker namespace, markets are classified using compiled regular expression patterns applied to market titles. This yields three comparable domains (Sports, Crypto, Politics); Finance is excluded due to thin coverage (2,516 Polymarket markets vs 38,058 on Kalshi), and Weather and Entertainment have negligible Polymarket presence. The 42.5\% of Polymarket markets classified as `Other' reflects its long tail of bespoke markets (celebrity events, technology launches, meme markets). Tables~\ref{tab:kalshi_summary} and~\ref{tab:poly_summary} provide summary statistics.
+
+\begin{table}[!t]
+\caption{Summary statistics by domain: Kalshi (cutoff 31 December 2025).\label{tab:kalshi_summary}}%
+\begin{tabular*}{\columnwidth}{@{\extracolsep\fill}lrrrrrr@{\extracolsep\fill}}
+\toprule
+Domain & Markets & Trades & Contracts & Resolved & Med.\ vol.\ & Base rate \\
+\midrule
+Sports        & 55,637   & 43.2M  & 12.7B  & 98.1\% & 76  & 41.3\% \\
+Crypto        & 76,181   & 6.5M   & 742.9M & 99.1\% & 35  & 40.7\% \\
+Politics      & 6,609    & 4.9M   & 2.2B   & 94.1\% & 127 & 40.2\% \\
+Finance       & 38,058   & 4.3M   & 677.2M & 99.0\% & 38  & 37.7\% \\
+Weather       & 26,911   & 4.4M   & 279.1M & 99.5\% & 74  & 24.0\% \\
+Entertainment & 7,212    & 1.5M   & 174.5M & 96.7\% & 60  & 38.0\% \\
+\midrule
+\textbf{Total}& \textbf{210,608} & \textbf{64.7M} & \textbf{16.8B} & \textbf{98.6\%} & \textbf{47} & \textbf{38.1\%} \\
+\botrule
+\end{tabular*}
+\begin{tablenotes}%
+\item \emph{Note:} Resolved (\%) computed over markets past their close date. Base rate is the percentage of resolved markets where outcome = yes. Median volume is the median number of trades per market. Components may not sum to totals due to rounding.
+\end{tablenotes}
+\end{table}
+
+Several features merit comment. Sports dominates Kalshi by volume (43.2 million trades, 66.7\% of the total) but Politics commands disproportionate contract value (2.2 billion contracts from only 6,609 markets, representing 13.3\% of total volume from 3.1\% of markets). Politics also has the highest median volume per market (127 trades), reflecting intense engagement with a smaller number of high-profile events. The distribution of trade sizes is heavily right-skewed across all domains: the median trade involves 40 contracts, but 0.15\% of trades (those exceeding 10,000 contracts) account for approximately 15\% of total contract volume. Polymarket (Table~\ref{tab:poly_summary}) shows a strikingly different composition: $4.0\times$ more trades overall but $0.8\times$ fewer markets, reflecting $8.0\times$ higher median per-market volume. The most consequential difference is in Politics, where Polymarket has $9.3\times$ more trades (45.7M vs 4.9M) and $11\times$ more contracts (24.6B vs 2.2B), suggesting substantially deeper price discovery.
+
+\begin{table}[!t]
+\caption{Summary statistics by domain: Polymarket (three comparable domains; cutoff 31 December 2025).\label{tab:poly_summary}}%
+\begin{tabular*}{\columnwidth}{@{\extracolsep\fill}lrrrrrr@{\extracolsep\fill}}
+\toprule
+Domain & Markets & Trades & Contracts & Resolved & Med.\ vol.\ & Base rate \\
+\midrule
+Sports   & 25,340  & 49.1M  & 21.1B  & 90.0\% & 129 & 34.0\% \\
+Crypto   & 73,918  & 125.3M & 10.7B  & 98.8\% & 674 & 45.0\% \\
+Politics & 14,225  & 45.7M  & 24.6B  & 81.1\% & 452 & 30.7\% \\
+\midrule
+\textbf{Total} & \textbf{113,483} & \textbf{220.1M} & \textbf{56.4B} & --- & \textbf{417} & \textbf{38.2\%} \\
+\botrule
+\end{tabular*}
+\begin{tablenotes}%
+\item \emph{Note:} Polymarket comparison is restricted to three domains with sufficient coverage; Finance is excluded due to thin coverage (2,516 markets). Weather and Entertainment have negligible Polymarket presence. The 42.5\% of Polymarket markets classified as `Other' reflects its long tail of bespoke markets. Median volume is the median number of trades per market.
+\end{tablenotes}
+\end{table}
+
+\subsection{Measuring calibration}\label{sec:measuring}
+
+Calibration is measured using logistic recalibration \citep{platt1999probabilistic,niculescumizil2005predicting}. For a collection of $N$ trades indexed by $i$, each with market price $p_i \in (0,1)$ and binary outcome $y_i \in \{0,1\}$, the following logistic regression is fitted by maximum likelihood.
+\begin{equation}\label{eq:logistic}
+\mathrm{logit}\bigl(P(y_i = 1)\bigr) = a + b \cdot \mathrm{logit}(p_i),
+\end{equation}
+where $\mathrm{logit}(x) = \log\{x/(1-x)\}$. The log-likelihood is
+\begin{equation}\label{eq:loglik}
+\ell(a, b) = \sum_{i=1}^{N} \bigl[y_i \log \pi_i + (1 - y_i) \log(1 - \pi_i)\bigr],
+\end{equation}
+with $\pi_i = \sigma(a + b \cdot \mathrm{logit}(p_i))$ and $\sigma(x) = \{1 + \exp(-x)\}^{-1}$.
+The slope $b$ captures calibration quality. When $b = 1$, the market is perfectly calibrated and prices correspond to true probabilities. When $b > 1$, the market is \emph{underconfident}, meaning prices are insufficiently extreme, compressed toward 50\%. A 70-cent contract actually corresponds to a true probability \emph{greater} than 70\%; the favourite is underpriced and the longshot is overpriced. This is the classic favourite--longshot bias \citep{griffith1949odds,page2013prediction}. Conversely, $b < 1$ indicates \emph{overconfidence}, with prices that are too extreme, overstating the probability gap between favourites and longshots. The intercept $a$ captures directional bias (systematic over- or under-prediction of ``yes'' outcomes); the focus here is on the slope as the primary calibration measure.
+
+The analysis is restricted to trades with prices between 5 and 95 cents, excludes markets with fewer than 10 trades, requires at least 200 trades per analysis cell, and applies mild $L_2$ regularisation ($C = 10$; \citealp{hosmer2013applied}). These choices are conservative; results are robust to alternative price ranges including $[2, 98]$ and $[10, 90]$ (Appendix~A).
+\subsection{Analysis dimensions}\label{sec:dimensions}
+
+For each trade, time-to-resolution is computed as $\tau = \text{close\_time} - \text{trade\_time}$ and discretised into nine bins, $[0, 1\text{h})$, $[1\text{h}, 3\text{h})$, $[3\text{h}, 6\text{h})$, $[6\text{h}, 12\text{h})$, $[12\text{h}, 24\text{h})$, $[24\text{h}, 48\text{h})$, $[2\text{d}, 1\text{w})$, $[1\text{w}, 1\text{mo})$ and $[1\text{mo}, \infty)$. Trade sizes are discretised into four bins, Single (1 contract), Small (2--10), Medium (11--100) and Large ($>$100). The full analysis grid comprises $6 \times 9 \times 4 = 216$ cells, all satisfying the minimum sample-size requirement. A total of 58.7 million Kalshi trades and 220.1 million Polymarket trades enter the calibration analysis after price filtering. Because Polymarket timestamps have approximately 3-hour noise (from block-number bucketing), the two shortest time bins (0--1h and 1--3h) are unreliable for cross-platform comparison; all Polymarket time-horizon results below use the seven reliable bins (3--6h through 1mo+).
+%% ============================================================
+%% SECTION 3: THE CALIBRATION LANDSCAPE
+%% ============================================================
+\section{The calibration landscape}\label{sec:landscape}
+
+Figure~\ref{fig:slope_trajectories} plots calibration slopes against time-to-resolution for each domain. The detailed slopes are reported in Table~\ref{tab:slopes}. Slopes above 1 indicate underconfidence (prices compressed toward 50\%); slopes below 1 indicate overconfidence (prices too extreme). Two features are immediately apparent: domains differ sharply, and these differences reflect different \emph{shapes} of calibration trajectory, not mere level shifts.
+
+\begin{figure}[!t]%
+\centering
+\includegraphics[width=0.78\columnwidth]{figure1_slope_trajectories.pdf}
+\caption{Calibration slope $b$ versus time-to-resolution, one line per domain. Slopes above 1 indicate underconfidence (prices compressed toward 50\%); slopes below 1 indicate overconfidence (prices too extreme).}\label{fig:slope_trajectories}
+\figalttext[Calibration slope trajectories by domain]{Line chart showing calibration slopes (y-axis, range approximately 0.6 to 1.9) against nine time-to-resolution bins (x-axis). Six coloured lines represent domains. Politics (red) is persistently above 1 at nearly all horizons, peaking near 1.83. Weather (blue) starts below 1 at short horizons and rises. Sports (green) stays near 1 until long horizons. All lines converge upward beyond one month.}%
+\end{figure}
+
+\begin{figure}[!t]%
+\centering
+\includegraphics[width=1\columnwidth]{figure6_cross_platform_trajectories.pdf}
+\caption{Cross-platform calibration slope trajectories: (A) Kalshi vs (B) Polymarket. The dominant pattern, political underconfidence, replicates across exchanges. Finance is shown on Polymarket for visual context but is excluded from formal cross-platform analysis due to thin coverage (2,516 markets).}\label{fig:cross_platform}
+\figalttext[Cross-platform slope comparison]{Side-by-side line charts comparing calibration slope trajectories on (A) Kalshi and (B) Polymarket for Sports, Crypto and Politics. On both platforms, Politics lines sit above the other domains, confirming cross-platform underconfidence. The Polymarket Politics slopes are attenuated relative to Kalshi.}%
+\end{figure}
+
+\begin{table*}[!t]
+\caption{Logistic recalibration slopes by domain and time-to-resolution. Values above 1.0 indicate underconfidence (prices compressed); below 1.0 indicate overconfidence (prices too extreme).\label{tab:slopes}}
+\tabcolsep=0pt%%
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lccccccccc@{\extracolsep{\fill}}}
+\toprule
+Domain & 0--1h & 1--3h & 3--6h & 6--12h & 12--24h & 24--48h & 2d--1w & 1w--1mo & 1mo+ \\
+\midrule
+Politics      & 1.34 & 0.93 & 1.32 & 1.55 & 1.48 & 1.52 & 1.83 & 1.83 & 1.73 \\
+Sports        & 1.10 & 0.96 & 0.90 & 1.01 & 1.05 & 1.08 & 1.04 & 1.24 & 1.74 \\
+Crypto        & 0.99 & 1.01 & 1.07 & 1.01 & 1.01 & 1.21 & 1.12 & 1.09 & 1.36 \\
+Finance       & 0.96 & 1.07 & 1.03 & 0.97 & 0.98 & 0.82 & 1.07 & 1.42 & 1.20 \\
+Weather       & 0.69 & 0.84 & 0.74 & 0.87 & 0.91 & 0.97 & 1.20 & 1.20 & 1.37 \\
+Entertainment & 0.81 & 1.02 & 1.00 & 0.92 & 0.89 & 0.84 & 1.07 & 1.11 & 0.96 \\
+\botrule
+\end{tabular*}
+\end{table*}
+\subsection{Three stylised facts}\label{sec:facts}
+
+\emph{Stylised Fact 1: All markets are underconfident about the distant future.} At long time horizons, prices in every domain become compressed toward 50\%, insufficiently extreme relative to the true outcome frequencies. The universal horizon component $\mu(\tau)$, computed as the mean slope across all domain--size cells at each time bin (Section~\ref{sec:decomposition}), rises from 0.99 (0--1 hour) to 1.32 (beyond one month); note that this cell-level mean differs from the simple average of the six aggregate domain slopes in Table~\ref{tab:slopes}, which are contract-weighted pooled estimates. This pattern is the classic favourite--longshot bias \citep{griffith1949odds,thaler1988anomalies,shin1991optimal,snowberg2010explaining} documented at unprecedented scale: at long horizons, favourites are systematically underpriced and longshots are overpriced. It persists after restricting to high-volume markets (Appendix~A), is consistent with theoretical predictions about favourite--longshot bias worsening with time to expiration \citep{page2013prediction}, and is confirmed on Polymarket across all three comparable domains.
+
+\emph{Stylised Fact 2: Domains follow different calibration trajectories (the full posterior $\beta$ matrix is in Table~\ref{tab:beta}).} This is the key insight. Political markets exhibit persistent underconfidence at nearly all horizons (slopes 0.93--1.83), with prices chronically compressed toward 50\%. A 70-cent contract in Politics one week before resolution corresponds to a true probability of approximately 83\%, not 70\%. Sports markets are well calibrated at short-to-medium horizons (slopes 0.90--1.10 from 0 to 48 hours) but become sharply underconfident at long horizons, reaching 1.74 beyond one month. Weather markets exhibit the opposite pattern: \emph{overconfidence} at short horizons (slopes 0.69--0.97 within 48 hours), where prices are too extreme. A journalist asking ``Should I trust this prediction market price?'' receives a fundamentally different answer depending on the subject matter and timing. These domain-specific trajectories replicate on Polymarket: Politics is underconfident (mean slope 1.31), Sports is near-calibrated (1.08), and Crypto is mildly underconfident (1.05).
+
+\emph{Stylised Fact 3: In political markets, large trades are associated with greater price compression.} On Kalshi, large trades (over 100 contracts) in political markets produce calibration slopes of 1.74, compared to 1.19 for single-contract trades (Table~\ref{tab:scale}). The gap of 0.53 (95\% bootstrap CI $[0.29, 0.75]$) is both statistically significant and practically consequential. In sports markets, the corresponding gap is 0.07 ($[-0.07, 0.26]$). Because prediction market prices weight traders by position size, these large, poorly calibrated trades are associated with disproportionate influence on the price. However, the effect is platform-specific: on Polymarket, the Politics gap shrinks to 0.11 ($[-0.15, 0.39]$), which is not statistically significant. The scale effect appears to reflect Kalshi's specific microstructure rather than a universal property of political prediction markets.
+
+\begin{table}[!t]
+\caption{Calibration slopes by domain and trade size (Kalshi). $\Delta$(L$-$S) is the mean of time-bin-specific slope differences between the Large and Single bins (the bootstrap estimand). On Polymarket, the Politics $\Delta$ is $+0.11$ $[-0.15, +0.39]$ (not significant); Sports $+0.01$ $[-0.20, +0.17]$; Crypto $+0.09$ $[-0.16, +0.36]$.\label{tab:scale}}%
+\begin{tabular*}{\columnwidth}{@{\extracolsep\fill}lccccc@{\extracolsep\fill}}
+\toprule
+Domain & Single & Small & Medium & Large & $\Delta$(L$-$S) \\
+\midrule
+Politics      & 1.19 & 1.22 & 1.37 & 1.74 & $+0.53$ \\
+Sports        & 1.00 & 1.01 & 1.01 & 1.01 & $+0.07$ \\
+Crypto        & 1.03 & 1.03 & 1.02 & 1.00 & $-0.02$ \\
+Finance       & 1.10 & 1.08 & 1.05 & 1.05 & $-0.05$ \\
+Weather       & 0.96 & 0.94 & 0.91 & 0.89 & $-0.07$ \\
+Entertainment & 0.98 & 1.02 & 1.00 & 0.99 & $+0.01$ \\
+\botrule
+\end{tabular*}
+\end{table}
+%% ============================================================
+%% SECTION 4: DIAGNOSING POTENTIAL ARTEFACTS
+%% ============================================================
+\section{Diagnosing potential artefacts}\label{sec:artefacts}
+
+\subsection{Is political underconfidence driven by a subset of markets?}\label{sec:subset}
+
+Political markets encompass diverse subcategories. If underconfidence were driven by a single subcategory, the finding would be narrower than claimed. Examining 10 political subcategories with sufficient data (see supplementary material), the pattern is found to be broadly distributed. Electoral College contracts show the strongest underconfidence (slopes 1.53--2.87 across time bins), while Trump Administration contracts span a wider range (0.54--1.64). Other Politics (1.42--2.38), Governor (1.19--4.02) and NYC Mayor (1.12--3.18) all exhibit persistent underconfidence.
+\subsection{Composition effects in the 1--3 hour bin}\label{sec:composition}
+
+Table~\ref{tab:slopes} shows that Politics achieves its lowest slope (0.93) at the 1--3 hour horizon, the only time bin where Politics appears slightly overconfident rather than underconfident. Disaggregation reveals a composition effect. Trump Administration markets comprise 63\% of trades in this bin and have a moderate slope of 1.08. Meanwhile, Electoral College contracts (7.4\% of trades, slope 1.81) and Other Politics (5.8\%, slope 2.17) remain strongly underconfident but are diluted by the Trump Administration majority. Leave-one-out analysis confirms the mixing: removing Trump Administration (the moderate majority) drops the aggregate from 0.93 to 0.88, revealing that the remaining subcategories are highly heterogeneous: some strongly underconfident (Electoral College 1.81, Other Politics 2.17), others overconfident (Biden Administration $-0.14$, a negative slope based on only 3.6\% of trades in this bin, likely reflecting thin, stale markets during the administration transition). Their opposing biases average to a misleadingly low aggregate. Removing Electoral College (the most underconfident minority) drops the aggregate to 0.69. The low aggregate slope reflects subcategory mixing, not a genuine regime shift.
+\subsection{Weighting sensitivity and the scale effect}\label{sec:weighting}
+
+Prediction market prices implicitly weight traders by position size. To disentangle the market price (contract-weighted) from the crowd belief distribution (trade-weighted), the two weighting schemes are compared. In Politics, contract-weighted slopes exceed trade-weighted slopes by an average of 0.33 across all time bins, with the gap reaching 0.54 at the 2-day-to-1-week horizon. Contract-weighted prices are \emph{more} compressed than trade-weighted prices: larger positions are associated with prices further from truth. In Sports, the corresponding gap averages 0.06 and is concentrated at the longest horizon (0.35 at 1 month+, near zero elsewhere). The influence of large trades is amplified by the heavy right skew in trade sizes: the median trade involves 40 contracts, but just 0.15\% of trades (those exceeding 10,000 contracts) account for approximately 15\% of total contract volume, confirming that a small number of large trades exert disproportionate influence on contract-weighted prices. On Polymarket, the Politics weighting gap collapses to $+0.05$, a more than six-fold reduction, and oscillates in sign across time bins, independently confirming that the scale effect is platform-specific.
+%% ============================================================
+%% SECTION 5: THE DECOMPOSITION MODEL
+%% ============================================================
+\section{The decomposition model}\label{sec:decomposition}
+
+\subsection{Framework}\label{sec:framework}
+
+The patterns in Section~\ref{sec:landscape} suggest an additive structure. The calibration slope is modelled as $\theta$ observed in cell $(d, \tau, s)$, where $d$ indexes domain, $\tau$ indexes time-to-resolution bin and $s$ indexes trade-size bin:
+\begin{equation}\label{eq:decomp}
+\theta(d, \tau, s) = \mu(\tau) + \alpha_d + \beta_d(\tau) + \gamma_d(s) + \varepsilon,
+\end{equation}
+where $\mu(\tau)$ is a \emph{universal horizon function} capturing the shared tendency toward underconfidence at long horizons; $\alpha_d$ is a \emph{domain intercept} capturing persistent bias (positive for Politics, negative for Weather); $\beta_d(\tau)$ is a \emph{domain-by-horizon interaction} capturing how each domain's trajectory deviates from the universal curve; and $\gamma_d(s)$ is a \emph{scale effect} capturing how trade size modulates calibration within each domain. The model is identified by the following constraints.
+\begin{align}
+\sum_{d=1}^{D} \alpha_d &= 0, \label{eq:id1}\\
+\sum_{d=1}^{D} \beta_d(\tau) &= 0 \quad \text{for each } \tau, \label{eq:id2}\\
+\sum_{s=1}^{S} \gamma_d(s) &= 0 \quad \text{for each } d. \label{eq:id3}
+\end{align}
+These ensure that the universal horizon function $\mu(\tau)$ absorbs the cross-domain mean at each horizon, the domain intercepts $\alpha_d$ absorb the cross-horizon mean for each domain, and the scale effects are mean-centred within each domain.
+
+The additive specification is chosen for interpretability and parsimony. In logit space, calibration slopes are unbounded and approximately continuous, making additive decomposition on the logit-transformed calibration measure a natural first-order approximation. A multiplicative specification (modelling log slopes) was also considered; the two yield nearly identical fits because the slopes are concentrated in the range $[0.7, 1.9]$, where additive and log-additive structures are approximately equivalent. A non-domain-specific size--horizon interaction term was tested (Section~\ref{sec:confound}) and found to explain only 2.6\% additional variance, insufficient to justify the 54 additional parameters it requires. The Bayesian hierarchical model in Section~\ref{sec:bayesian} provides a complementary check: its continuous parameterisation of the scale effect ($\delta_d \times \log s$) differs structurally from the categorical specification here, yet the two approaches yield parameter estimates within 0.005 of each other (Table~\ref{tab:bayesian_intercepts}), supporting the robustness of the additive decomposition to functional-form assumptions.
+\subsection{Variance decomposition}\label{sec:variance}
+
+The decomposition is estimated using sequential projection, analogous to Type~I sums of squares. Let $\bar{\theta}$ denote the grand mean of all 216 observed slopes. The total sum of squares is
+\begin{equation}\label{eq:sstot}
+\mathrm{SS}_{\mathrm{tot}} = \sum_{d,\tau,s} \bigl[\theta(d,\tau,s) - \bar{\theta}\bigr]^2,
+\end{equation}
+and the residual sum of squares after fitting~\eqref{eq:decomp} is
+\begin{equation}\label{eq:ssres}
+\mathrm{SS}_{\mathrm{res}} = \sum_{d,\tau,s} \bigl[\theta(d,\tau,s) - \hat{\theta}(d,\tau,s)\bigr]^2,
+\end{equation}
+where $\hat{\theta}(d,\tau,s) = \hat{\mu}(\tau) + \hat{\alpha}_d + \hat{\beta}_d(\tau) + \hat{\gamma}_d(s)$. Each component's marginal contribution is computed sequentially: $R^2_\mu = 1 - \mathrm{SS}_{\mathrm{res}}^{(\mu)} / \mathrm{SS}_{\mathrm{tot}}$, then $R^2_\alpha = R^2_{\mu,\alpha} - R^2_\mu$, and so on. Table~\ref{tab:variance} reports the variance explained. The model accounts for 87.3\% of calibration variance across 216 cells. The model has 72 parameters (9 for $\mu$, 5 for $\alpha$, 40 for $\beta$, 18 for $\gamma$) for 216 observations, yielding an adjusted $R^2$ of 0.810. It is worth noting, however, that the Bayesian hierarchical model in Section~\ref{sec:bayesian}, which imposes partial pooling through hierarchical priors and thus penalises effective model complexity, achieves 96.3\% posterior predictive coverage (Section~\ref{sec:ppc}), confirming that the four-component structure captures genuine signal rather than noise.
+
+\begin{table}[!t]
+\caption{Variance decomposition of calibration slopes (216 cells, Type~I).\label{tab:variance}}%
+\begin{tabular*}{\columnwidth}{@{\extracolsep\fill}llcc@{\extracolsep\fill}}
+\toprule
+Component & Interpretation & Marginal $R^2$ & Cumulative $R^2$ \\
+\midrule
+$\mu(\tau)$       & Universal horizon effect       & 0.302 & 0.302 \\
+$\alpha_d$        & Domain intercept               & 0.146 & 0.448 \\
+$\beta_d(\tau)$   & Domain $\times$ horizon interaction & 0.260 & 0.708 \\
+$\gamma_d(s)$     & Domain $\times$ size effect    & 0.165 & 0.873 \\
+$\varepsilon$     & Residual                       & 0.127 & --- \\
+\botrule
+\end{tabular*}
+\end{table}
+
+The domain-by-horizon interaction $\beta$ is the single largest domain-specific component (26.0\%). Knowing \emph{which} domain a market belongs to and \emph{when} you observe it is more informative about calibration quality than either piece of information alone. A domain-agnostic model, however sophisticated, misses the largest source of calibration variation.
+
+Because Type~I decomposition is order-dependent, verification is conducted with Type~II and Type~III sums of squares. The interaction terms are nearly identical across all three types, with $\beta$ accounting for 26.0\% and $\gamma$ for 16.1--16.5\% regardless of decomposition order (the small range reflects minor numerical differences between sequential projection and OLS estimation). Only the main effects shift between types, as expected when time and domain share variance. Additionally, weighting cells by inverse estimation variance yields the weighted decomposition
+\begin{equation}\label{eq:wls}
+\hat{\boldsymbol{\phi}}_{\mathrm{WLS}} = \arg\min_{\boldsymbol{\phi}} \sum_{d,\tau,s} w_{d\tau s} \bigl[\theta(d,\tau,s) - \hat{\theta}(d,\tau,s;\, \boldsymbol{\phi})\bigr]^2, \quad w_{d\tau s} = 1/\mathrm{SE}^2_{d\tau s},
+\end{equation}
+where $\boldsymbol{\phi} = (\mu, \alpha, \beta, \gamma)$ collects all model parameters. This yields a total $R^2$ of 0.995, with the horizon effect $\mu$ dominating (0.74 vs 0.30 unweighted). This confirms that the four-component model explains nearly all variance in precisely estimated cells; the 12.7\% residual in the unweighted decomposition is concentrated in noisy, low-volume cells (Appendix~A). The domain intercepts replicate on Polymarket: Politics remains the clear positive outlier (mean slope 1.31 at reliable horizons), while Sports (1.08) and Crypto (1.05) cluster near perfect calibration, the same qualitative ranking as on Kalshi (Appendix~C reports full cross-platform comparison tables).
+
+\begin{figure}[!t]%
+\centering
+\includegraphics[width=1\columnwidth]{figure2_hero.pdf}
+\caption{Four-panel decomposition of calibration slopes. (A) Universal horizon effect $\mu(\tau)$. (B) Domain intercepts $\alpha_d$. (C) Domain-by-horizon interactions $\beta_d(\tau)$. (D) Domain-by-size effects $\gamma_d(s)$.}\label{fig:hero}
+\figalttext[Four-panel decomposition]{Four panels. (A) Line chart of universal horizon function rising from approximately 1.0 to 1.3. (B) Bar chart of domain intercepts with Politics strongly positive and Weather and Entertainment negative. (C) Spaghetti plot of domain-specific deviations across horizons. (D) Grouped bar chart showing trade-size gradients by domain, with Politics exhibiting a steep upward gradient.}%
+\end{figure}
+
+\begin{figure}[!t]%
+\centering
+\includegraphics[width=0.58\columnwidth]{figure3_observed_vs_fitted.pdf}
+\caption{Observed versus fitted calibration slopes ($R^2 = 0.873$). Each point is one of 216 analysis cells.}\label{fig:obs_vs_fit}
+\figalttext[Observed versus fitted scatter plot]{Scatter plot with fitted slopes on the x-axis and observed slopes on the y-axis. Points cluster tightly around the 45-degree identity line, with modest scatter. An R-squared of 0.873 is displayed. A few outlier cells with high observed slopes appear in the upper portion.}%
+\end{figure}
+\subsection{Statistical significance}\label{sec:significance}
+
+All components are highly significant (Table~\ref{tab:ftest}). Domain intercepts differ ($F(5, 144) = 33.16$, $p < 10^{-16}$). Domain-specific trajectories are necessary ($F(40, 144) = 7.40$, $p < 10^{-16}$). The domain-by-size interaction is confirmed ($F(18, 144) = 10.42$, $p < 10^{-16}$).
+
+The Politics scale effect (the slope difference of 0.53 between large and single-contract trades) is formally defined as
+\begin{equation}\label{eq:delta}
+\Delta_d = \frac{1}{T} \sum_{\tau=1}^{T} \bigl[\theta(d, \tau, s_{\text{L}}) - \theta(d, \tau, s_{\text{S}})\bigr],
+\end{equation}
+where $s_{\text{L}}$ and $s_{\text{S}}$ index the Large and Single trade-size bins respectively, and $T = 9$ is the number of time bins. This within-horizon averaging ensures that the estimand is not confounded by compositional differences across horizons. The 95\% trade-level bootstrap CI is $[0.29, 0.75]$. Because trades within the same market are serially correlated, a market-clustered bootstrap is also computed (resampling entire markets rather than individual trades). The clustered CI is wider, as expected with fewer effective resampling units, but still excludes zero ($[0.13, 1.29]$). The Sports scale effect remains null under both methods (trade-level $[-0.07, 0.26]$; clustered $[-0.03, 0.05]$).
+\subsection{Is the scale effect confounded with time horizon?}\label{sec:confound}
+
+If large trades concentrate at long horizons, the scale effect could be an artefact of horizon confounding. Three checks rule this out. First, in Politics, large trades have \emph{shorter} median horizons (213 hours) than single-contract trades (862 hours); confounding would therefore bias \emph{against} finding a scale effect, not in favour of it. Second, adding a non-domain-specific size--horizon interaction to the model explains only 2.6\% additional variance; the domain-specific scale effect $\gamma$ remains substantial ($R^2 = 0.132$ vs $0.161$ in the OLS specification without the interaction; the sequential projection in Table~\ref{tab:variance} yields $0.165$). Third, within Politics, the scale effect is positive in all nine time bins, ranging from $+0.12$ (1--3 hours) to $+0.81$ (2 days--1 week). The scale effect is not an artefact of horizon confounding (Tables~\ref{tab:confound} and~\ref{tab:ftest}).
+
+\begin{figure}[!t]%
+\centering
+\includegraphics[width=0.78\columnwidth]{figure4_whale_effect.pdf}
+\caption{Calibration slopes by trade size: (A) Politics versus (B) Sports. In Politics, larger trades are associated with more compressed prices (higher slopes). In Sports, no such gradient exists.}\label{fig:whale}
+\figalttext[Scale effect comparison]{Two panels. (A) Politics: grouped bar chart showing calibration slopes rising monotonically from Single (approximately 1.19) to Large (approximately 1.74) across all time bins. (B) Sports: flat bars near 1.0 across all trade sizes with no visible gradient.}%
+\end{figure}
+
+\begin{figure}[!t]%
+\centering
+\includegraphics[width=0.78\columnwidth]{figure7_cross_platform_scale.pdf}
+\caption{Cross-platform scale effect in Politics. (A) Kalshi shows a monotonic increase from Single (1.19) to Large (1.74), $\Delta = +0.53$ $[0.29, 0.75]$. (B) Polymarket shows a non-monotonic pattern, $\Delta = +0.11$ $[-0.15, +0.39]$ (not significant). Bar labels show aggregate slope differences (Table~\ref{tab:cross_scale}); bootstrap CIs use the within-horizon estimand of Equation~\eqref{eq:delta}.}\label{fig:cross_scale}
+\figalttext[Cross-platform scale effect]{Two panels. (A) Kalshi: bar chart of Politics calibration slopes rising monotonically from Single to Large, with bootstrap confidence interval excluding zero. (B) Polymarket: non-monotonic bars with a dip at Small and plateau at Medium--Large; bootstrap confidence interval includes zero.}%
+\end{figure}
+%% ============================================================
+%% SECTION 6: BAYESIAN HIERARCHICAL MODEL
+%% ============================================================
+\section{Bayesian hierarchical model}\label{sec:bayesian}
+
+The additive decomposition in Section~\ref{sec:decomposition} is descriptive: it treats estimated slopes as data without accounting for their estimation uncertainty. A Bayesian hierarchical model is now developed that provides coherent uncertainty quantification and partial pooling.
+\subsection{Model specification}\label{sec:bayesian_spec}
+
+For the observed calibration slope $\theta_{\mathrm{obs}}$ in cell $(d, \tau, s)$, the model specifies three levels. At the observation level,
+\begin{equation}\label{eq:bayesian}
+\theta_{\mathrm{obs}}(d, \tau, s) \sim \mathcal{N}\bigl(\mu(\tau) + \alpha_d + \beta_d(\tau) + \delta_d \cdot \tilde{s},\; \sigma^2\bigr),
+\end{equation}
+where $\tilde{s} = \log s - \overline{\log s}$ is the centred log trade size for bin $s$. At the prior level, each component receives a hierarchical structure.
+\begin{align}
+\mu(\tau) &\sim \mathcal{N}(1.0,\; 0.5^2), \quad \tau = 1, \ldots, 9, \label{eq:prior_mu}\\
+\alpha_d &\sim \mathcal{N}(0,\; \sigma_\alpha^2), \quad \sum_{d=1}^{6}\alpha_d = 0, \label{eq:prior_alpha}\\
+\beta_d(\tau) &\sim \mathcal{N}(0,\; \sigma_\beta^2), \quad \sum_{d}\beta_d(\tau) = 0 \;\forall\, \tau, \label{eq:prior_beta}\\
+\delta_d &\sim \mathcal{N}(0,\; \sigma_\delta^2). \label{eq:prior_delta}
+\end{align}
+The prior for $\mu(\tau)$ is centred at perfect calibration ($b = 1$). At the hyperprior level,
+\begin{equation}\label{eq:hyperprior}
+\sigma_\alpha,\; \sigma_\beta,\; \sigma_\delta,\; \sigma \;\overset{\mathrm{ind.}}{\sim}\; \mathrm{Half\text{-}Cauchy}(0,\, 1).
+\end{equation}
+The non-centred parameterisation $\alpha_d = \sigma_\alpha \cdot \alpha_d^{\mathrm{raw}}$, with $\alpha_d^{\mathrm{raw}} \sim \mathcal{N}(0,1)$, is used for all hierarchical effects to improve sampling efficiency. Sum-to-zero constraints apply to all domain-level parameters.
+\subsection{Results}\label{sec:bayesian_results}
+
+Posterior inference is conducted via Hamiltonian Monte Carlo \citep{neal2011mcmc,betancourt2017conceptual} using NumPyro \citep{phan2019composable} (4 chains, 4,000 iterations with 2,000 warmup). The maximum split-$\hat{R}$ \citep{vehtari2021rank,brooks1998general} is 1.000, the minimum bulk effective sample size is 4,070, and no divergent transitions occurred.
+
+Table~\ref{tab:bayesian_intercepts} reports domain intercepts. Politics is the clear outlier: posterior mean $+0.151$ (95\% credible interval $[0.122, 0.179]$), entirely above zero, confirming persistent underconfidence. Weather ($-0.086$, $[-0.115, -0.057]$) and Entertainment ($-0.085$, $[-0.114, -0.056]$) are significantly below zero, indicating overconfidence. Sports ($+0.010$), Crypto ($+0.005$) and Finance ($+0.006$) are indistinguishable from zero.
+
+\begin{table}[!t]
+\caption{Bayesian posterior summaries for domain intercepts $\alpha_d$.\label{tab:bayesian_intercepts}}%
+\begin{tabular*}{\columnwidth}{@{\extracolsep\fill}lcccc@{\extracolsep\fill}}
+\toprule
+Domain & Post.\ mean & SD & 95\% CI & Freq.\ \\
+\midrule
+Politics      & $+0.151$ & 0.015 & $[+0.122, +0.179]$ & $+0.156$ \\
+Sports        & $+0.010$ & 0.015 & $[-0.020, +0.039]$ & $+0.009$ \\
+Crypto        & $+0.005$ & 0.015 & $[-0.024, +0.034]$ & $+0.004$ \\
+Finance       & $+0.006$ & 0.015 & $[-0.023, +0.035]$ & $+0.006$ \\
+Weather       & $-0.086$ & 0.015 & $[-0.115, -0.057]$ & $-0.090$ \\
+Entertainment & $-0.085$ & 0.015 & $[-0.114, -0.056]$ & $-0.086$ \\
+\botrule
+\end{tabular*}
+\begin{tablenotes}%
+\item \emph{Note:} Freq.\ column reports the corresponding frequentist estimate. Maximum discrepancy is 0.005 (Politics).
+\end{tablenotes}
+\end{table}
+
+The maximum parameter discrepancy between approaches is 0.005 (Politics), confirming that the hierarchical priors provide appropriate shrinkage without distortion. It is worth noting that the frequentist model treats $\gamma_d(s)$ as categorical (four size bins), while the Bayesian model parameterises the scale effect as $\delta_d \times \log(s)$, a continuous linear specification; the close agreement between the two despite this parameterisation difference supports the robustness of the decomposition. The scale sensitivity $\delta$ confirms the scale effect, with Politics at $\delta = +0.088$ (95\% CI $[0.072, 0.103]$), the only domain with a credible interval entirely above zero, indicating that larger trades are associated with more compressed, less calibrated prices.
+\subsection{Posterior predictive check}\label{sec:ppc}
+
+Of 216 cells, 208 (96.3\%) have observed slopes within their 95\% posterior predictive intervals, close to the nominal 95\% coverage (Table~\ref{tab:ppc_domain} reports per-domain breakdowns). The 8 cells outside are not concentrated in any single domain (Figure~\ref{fig:ppc}).
+
+\begin{figure}[!t]%
+\centering
+\includegraphics[width=0.68\columnwidth]{figure5_posterior_predictive.pdf}
+\caption{Posterior predictive check: observed versus posterior-predicted calibration slopes with 95\% intervals. Of 216 cells, 208 (96.3\%) fall within their prediction intervals.}\label{fig:ppc}
+\figalttext[Posterior predictive check]{Scatter plot of observed slopes versus posterior-predicted slopes with vertical 95 percent prediction intervals. Of 216 points, 208 fall within their intervals (96.3 percent coverage). The eight outlier cells are scattered across domains without systematic clustering.}%
+\end{figure}
+%% ============================================================
+%% SECTION 7: DISCUSSION
+%% ============================================================
+\section{Discussion}\label{sec:discussion}
+
+\subsection{Why do domains differ?}\label{sec:why}
+
+The finding that domain-by-horizon interactions constitute the largest calibration component (26.0\%) demands explanation. Three interpretive hypotheses are offered.
+
+\emph{The bilateral cancellation hypothesis.} Political markets attract traders with strong, opposing convictions. In a presidential race, partisans on both sides may trade aggressively, each confident their candidate will win. These opposing bets partially cancel: a large buy order at 65 cents meets a large sell order, and the price stays near 50--60\% even when the true probability is substantially higher or lower. The result is systematic price compression (underconfidence) that worsens as larger, more conviction-driven traders enter the market. This connects directly to \citeauthor{manski2006interpreting}'s (\citeyear{manski2006interpreting}) theoretical prediction (see also \citealp{ottaviani2008favorite}) that heterogeneous beliefs and risk preferences can cause prices to diverge from mean beliefs, and explains why the scale effect is confined to Politics: the other domains lack the bipolar conviction structure that drives bilateral cancellation. Cross-platform evidence strengthens this interpretation: the domain-level underconfidence ($b > 1$) replicates on Polymarket, confirming that bilateral cancellation is a structural feature of political prediction, but the trade-size amplification does not, consistent with Polymarket's pseudonymous blockchain environment fragmenting whale positions across multiple wallets and its $11\times$ deeper liquidity absorbing large trades more efficiently (Tables~\ref{tab:cross_scale}--\ref{tab:cross_bootstrap}). Note that Politics on Kalshi, despite comprising only 7.6\% of trades, accounts for 13.3\% of contract volume, consistent with larger position sizes driven by conviction.
+
+\emph{The signal over-reaction hypothesis.} Weather markets are uniquely overconfident at short horizons, the only domain where prices are too extreme. This likely reflects over-reaction to meteorological signals. When a forecast predicts a storm tomorrow, traders push prices too far: they overshoot what climatological base rates would justify. Weather's low base rate (24.0\% in Table~\ref{tab:kalshi_summary}, reflecting threshold exceedance contracts) means that over-reacting to ``yes'' signals is particularly costly. At longer horizons, where meteorological signals are weaker and base rates dominate, weather markets converge to the universal underconfidence pattern.
+
+\emph{The information convergence hypothesis.} Sports markets are well calibrated at short-to-medium horizons because information is continuous, quantifiable and publicly observable: game scores update in real time, player statistics are tracked in detail, injury reports follow regular schedules. This generates smooth convergence to truth with minimal disagreement, so that prices reach appropriate extremes. At long horizons (1 month+), sports forecasting becomes more speculative, information advantage declines, and the same favourite--longshot underconfidence that affects all domains takes hold (slope 1.74). The sports trajectory illustrates a general principle: calibration quality tracks the richness of the available information environment \citep[cf.][]{sunstein2006infotopia}.
+\subsection{Practical implications for prediction market consumers}\label{sec:practical}
+
+Prediction markets are increasingly cited by journalists, embedded in news coverage and referenced by policymakers. The findings suggest domain-specific caution. For any (domain, horizon, trade-size) combination, the estimated slope $\hat{\theta}$ transforms a raw market price $p \in (0,1)$ into a recalibrated probability.
+\begin{equation}\label{eq:recalibrate}
+p^* = \sigma\!\bigl(\hat{\theta} \cdot \mathrm{logit}(p)\bigr) = \frac{p^{\hat{\theta}}}{p^{\hat{\theta}} + (1-p)^{\hat{\theta}}},
+\end{equation}
+where $\sigma(\cdot)$ is the logistic function and the second equality follows from algebraic simplification. When $\hat{\theta} > 1$ (underconfidence), $p^* > p$ for $p > 0.5$ and $p^* < p$ for $p < 0.5$, so the recalibrated probability is more extreme than the raw price. When $\hat{\theta} < 1$ (overconfidence), the recalibrated probability is more moderate. The full 216-cell calibration matrix is provided as supplementary material.
+
+\emph{For political markets.} A price of 70 cents in a political market one week before resolution does not mean 70\%. Applying~\eqref{eq:recalibrate} with the domain- and horizon-specific slope $\hat{\theta} \approx 1.83$ yields
+\begin{equation}\label{eq:example}
+p^* = \frac{0.70^{1.83}}{0.70^{1.83} + 0.30^{1.83}} \approx 0.83.
+\end{equation}
+Political prediction market prices are systematically compressed toward 50\%, with favourites underpriced and longshots overpriced. Journalists who report these prices at face value systematically understate the confidence that should be attached to the leading outcome.
+
+\emph{For sports markets.} At horizons under one week, sports market prices are reasonably trustworthy (slopes 0.90--1.10). Beyond one month, the favourite--longshot bias appears strongly (slope 1.74).
+
+\emph{For weather markets.} At short horizons, weather prices are if anything too extreme, over-reacting to signals. Consumers of short-horizon weather contracts should recognise that the price may overstate the probability of the predicted outcome. At moderate horizons, weather markets are among the best calibrated.
+\subsection{Implications for market design}\label{sec:design}
+
+\emph{Position limits in political markets.} The scale effect suggests that large positions are associated with amplified price compression in political markets. Position limits or progressive fee structures would reduce the influence of conviction-driven bilateral trading.
+
+\emph{One-person-one-vote aggregation.} The finding that trade-weighted calibration is substantially better than contract-weighted calibration in Politics (mean gap 0.33) suggests that equal-weight aggregation may produce better probabilities in politically polarised domains. Prediction polls \citep{atanasov2017distilling,pennock2001real} that weight each forecaster equally may outperform wealth-weighted markets for political questions.
+
+\emph{Domain-specific credibility indicators.} Exchanges could display calibration track records alongside prices, such as a traffic-light system indicating whether a given domain--horizon combination has historically been well calibrated, compressed, or over-reactive.
+\subsection{Implications for forecasting research}\label{sec:research}
+
+These results challenge domain-agnostic calibration studies. The decomposition shows that pooling across domains obscures the dominant source of calibration variation. Future studies should stratify by domain and time horizon. The four-component framework extends naturally to election models, expert platforms and machine learning probability outputs.
+\subsection{Limitations}\label{sec:limitations}
+
+Several limitations should be noted. First, although core findings are validated on two exchanges, both are US-centric platforms; prediction markets in different regulatory environments (e.g.\ Betfair in the UK; see \citealp{smith2006market}) may exhibit different patterns. The Polymarket comparison is limited to three of six domains and affected by timestamp noise at short horizons.
+
+Second, the domain classification is coarse. Within Politics, subcategories have different dynamics (Section~\ref{sec:artefacts}). A finer-grained decomposition would require a more complex model.
+
+Third, only trades are observed, not trader identities. The bilateral cancellation interpretation of the scale effect is consistent with the data but is a hypothesis. Alternative explanations (institutional hedging, algorithmic artefacts) cannot be ruled out without richer data.
+
+Fourth, the logistic recalibration model is one approach to measuring calibration. Reliability diagrams \citep{murphy1977reliability}, proper scoring rules \citep{gneiting2007strictly,brier1950verification} and nonparametric calibration curves provide complementary perspectives that future work should integrate.
+
+Fifth, whether these patterns are stable over time is an open question. The decomposition is designed to be re-estimated as new data becomes available.
+%% ============================================================
+%% SECTION 8: CONCLUSION
+%% ============================================================
+\section{Conclusion}\label{sec:conclusion}
+
+Prediction markets are powerful information aggregation mechanisms, but their power is not uniform. This paper shows, using data from two structurally different exchanges, that calibration varies systematically across knowledge domains, time horizons and trade sizes. Four components account for 87.3\% of this variation on Kalshi, and the dominant pattern, political underconfidence, replicates on Polymarket.
+
+All crowds share a tendency toward the favourite--longshot bias at long horizons, with prices compressed toward 50\%, understating the probability of favoured outcomes. But some crowds, particularly those trading on political events, exhibit this compression at nearly every horizon, and it is most pronounced among the traders who wager most heavily. This is interpreted as bilateral cancellation, in which opposing partisan bets pull prices toward 50\%. This interpretation is consistent with the broader behavioural finance literature on how probability weighting distorts risk assessment \citep{kahneman1979prospect,tversky1992advances}. Cross-platform evidence supports this interpretation. The domain-level bias replicates on Polymarket, but the trade-size amplification does not, consistent with pseudonymous blockchain trading fragmenting whale positions. Other crowds, those trading on weather, display the opposite bias at short horizons, over-reacting to signals and pushing prices too far. Sports crowds, anchored by continuous information and disciplined by professional participants, come closest to the calibration ideal at short-to-medium horizons.
+
+These findings have practical consequences. Millions of people now consult prediction markets. If they take prices at face value, they are systematically misled, and the direction of their error depends on what they are looking at. In political markets, the true probability of the favoured outcome is substantially higher than the price suggests. In short-horizon weather markets, it may be lower.
+
+The wisdom of crowds is real, but it has a structure. Understanding that structure is essential for using it wisely.
+\section*{Data availability statement}
+
+The Kalshi and Polymarket data used in this study were collected using the data collection framework and pre-collected dataset of \citet{becker2026microstructure}, available at \url{https://github.com/Jon-Becker/prediction-market-analysis/}. The raw data are also publicly accessible through the Kalshi API (\url{https://trading-api.readme.io/}) and the Gamma API/Polygon blockchain indexer. The analysis code, domain classification rules and the full 216-cell calibration matrix are available at \url{https://github.com/namanhz/prediction-market-calibration} and as supplementary material. All results can be reproduced from the deposited code and the publicly accessible datasets.
+
+\section*{Supplementary material}
+
+Supplementary material is available online at the journal website. It includes (a) the full 216-cell calibration matrix as a CSV file, (b) domain classification rules (560+ pattern rules) and (c) cross-platform comparison tables.
+
+\section*{Acknowledgements}
+
+The author thanks Jonathan Becker for developing the prediction market data collection framework and pre-collected dataset, which greatly facilitated data acquisition for this study.
+
+\section*{Funding}
+
+This research received no specific grant from any funding agency in the public, commercial or not-for-profit sectors.
+
+\section*{Conflict of interest}
+
+The author declares no conflict of interest. The author has no financial interest in Kalshi, Polymarket or any prediction market exchange.
+%% ============================================================
+%% REFERENCES
+%% ============================================================
+\bibliographystyle{abbrvnat}
+\bibliography{references}
+%% ============================================================
+%% APPENDICES
+%% ============================================================
+\begin{appendices}
+
+\section{Robustness checks}\label{app:robustness}
+
+\begin{table}[!t]
+\caption{Variance decomposition under alternative specifications.\label{tab:robust}}%
+\begin{tabular*}{\columnwidth}{@{\extracolsep\fill}lccccc@{\extracolsep\fill}}
+\toprule
+Specification & $\mu$ $R^2$ & $\alpha$ $R^2$ & $\beta$ $R^2$ & $\gamma$ $R^2$ & Total $R^2$ \\
+\midrule
+Baseline $[5,95]$, $C=10$ & 0.302 & 0.146 & 0.260 & 0.165 & 0.873 \\
+Volume $\geq 100$         & 0.302 & 0.146 & 0.260 & 0.165 & 0.873 \\
+Price $[10,90]$           & 0.295 & 0.097 & 0.333 & 0.137 & 0.861 \\
+Price $[2,98]$            & 0.308 & 0.157 & 0.231 & 0.190 & 0.885 \\
+Price $[1,99]$            & 0.279 & 0.158 & 0.242 & 0.183 & 0.861 \\
+$C = 1$                   & 0.302 & 0.146 & 0.260 & 0.165 & 0.873 \\
+$C = 100$                 & 0.302 & 0.146 & 0.260 & 0.165 & 0.873 \\
+\botrule
+\end{tabular*}
+\begin{tablenotes}%
+\item Total $R^2$ is stable across all price ranges (0.861--0.885) and regularisation strengths (identical at $C = 1, 10, 100$). Volume filtering produces identical results. The wider price range $[2, 98]$ slightly increases total $R^2$ to 0.885; the domain ranking is preserved.
+\end{tablenotes}
+\end{table}
+
+\begin{table}[!t]
+\caption{Scale effect: trade-level versus market-clustered bootstrap.\label{tab:bootstrap}}%
+\begin{tabular*}{\columnwidth}{@{\extracolsep\fill}llccc@{\extracolsep\fill}}
+\toprule
+Domain & Bootstrap method & Mean $\Delta$ & 95\% CI & Sig.?\ \\
+\midrule
+Politics & Trade-level      & $+0.53$ & $[0.29, 0.75]$    & Yes \\
+Politics & Market-clustered & $+0.59$ & $[0.13, 1.29]$    & Yes \\
+Sports   & Trade-level      & $+0.07$ & $[-0.07, 0.26]$   & No  \\
+Sports   & Market-clustered & $+0.01$ & $[-0.03, 0.05]$   & No  \\
+\botrule
+\end{tabular*}
+\end{table}
+
+\begin{table}[!t]
+\caption{Size $\times$ horizon confounding diagnostic: median hours to close by domain and trade size.\label{tab:confound}}%
+\begin{tabular*}{\columnwidth}{@{\extracolsep\fill}lcccc@{\extracolsep\fill}}
+\toprule
+Domain & Single & Small & Medium & Large \\
+\midrule
+Sports        & 2.3   & 7.6    & 1.5    & 96.3   \\
+Crypto        & 202.2 & 5.7    & 0.6    & 5,936.7\\
+Politics      & 862   & 1,505  & 1,488  & 213    \\
+Finance       & 1.7   & 427.1  & 0.5    & 4.5    \\
+Weather       & 14.9  & 15.8   & 24.2   & 156.6  \\
+Entertainment & 144.3 & 0.5    & 0.6    & 55.5   \\
+\botrule
+\end{tabular*}
+\begin{tablenotes}%
+\item In Politics, large trades have shorter median horizons (213 hours) than single-contract trades (862 hours), meaning any horizon confounding would bias against finding a scale effect.
+\end{tablenotes}
+\end{table}
+\begin{table}[!t]
+\caption{$F$-test derivation and effect sizes.\label{tab:ftest}}%
+\begin{tabular*}{\columnwidth}{@{\extracolsep\fill}lccccr@{\extracolsep\fill}}
+\toprule
+Source & SS & df & MS & $F$ & Partial $\eta^2$ \\
+\midrule
+$\alpha$ (domain)        & 1.435 & 5   & 0.287 & 33.16 & 0.535 \\
+$\beta$ (domain$\times$time) & 2.562 & 40  & 0.064 & 7.40  & 0.673 \\
+$\gamma$ (domain$\times$size)& 1.624 & 18  & 0.090 & 10.42 & 0.566 \\
+Residual                 & 1.247 & 144 & 0.009 & ---   & ---   \\
+\botrule
+\end{tabular*}
+\begin{tablenotes}%
+\item All $p$-values are below $10^{-16}$. Partial $\eta^2 = \mathrm{SS}_{\text{component}} / (\mathrm{SS}_{\text{component}} + \mathrm{SS}_{\text{residual}})$.
+\end{tablenotes}
+\end{table}
+\section{Bayesian model specification and diagnostics}\label{app:bayesian}
+
+\begin{table}[!t]
+\caption{Prior specification.\label{tab:priors}}%
+\begin{tabular*}{\columnwidth}{@{\extracolsep\fill}llcl@{\extracolsep\fill}}
+\toprule
+Parameter & Prior & Dim.\ & Constraint \\
+\midrule
+$\mu(\tau)$  & $\mathcal{N}(1.0, 0.5)$    & 9  & None \\
+$\sigma_\alpha$ & $\mathrm{HalfCauchy}(1.0)$ & 1  & $> 0$ \\
+$\alpha_{\mathrm{raw}}$ & $\mathcal{N}(0, 1)$ & 5  & Sum-to-zero \\
+$\sigma_\beta$  & $\mathrm{HalfCauchy}(1.0)$ & 1  & $> 0$ \\
+$\beta_{\mathrm{raw}}$  & $\mathcal{N}(0, 1)$ & 40 & Doubly centred \\
+$\sigma_\delta$ & $\mathrm{HalfCauchy}(1.0)$ & 1  & $> 0$ \\
+$\delta_{\mathrm{raw}}$ & $\mathcal{N}(0, 1)$ & 6  & None \\
+$\sigma$        & $\mathrm{HalfCauchy}(1.0)$ & 1  & $> 0$ \\
+\botrule
+\end{tabular*}
+\begin{tablenotes}%
+\item The model uses non-centred parameterisations for all hierarchical effects. The domain intercepts satisfy a sum-to-zero constraint. The interaction matrix $\beta$ is doubly centred.
+\end{tablenotes}
+\end{table}
+
+\begin{table}[!t]
+\caption{Hyperparameter posterior summaries.\label{tab:hyper}}%
+\begin{tabular*}{\columnwidth}{@{\extracolsep\fill}lcccc@{\extracolsep\fill}}
+\toprule
+Parameter & Mean & SD & 95\% CI & Interpretation \\
+\midrule
+$\sigma_\alpha$ & 0.097 & 0.035 & $[0.048, 0.183]$ & Moderate spread \\
+$\sigma_\beta$  & 0.098 & 0.011 & $[0.079, 0.122]$ & Well-constrained \\
+$\sigma_\delta$ & 0.036 & 0.013 & $[0.017, 0.067]$ & Small \\
+$\sigma$        & 0.097 & 0.006 & $[0.087, 0.109]$ & Residual $\approx 0.10$ \\
+\botrule
+\end{tabular*}
+\begin{tablenotes}%
+\item Maximum $\hat{R}$ across all parameters is 1.0000; minimum effective sample size is 4,070.
+\end{tablenotes}
+\end{table}
+
+\begin{sidewaystable}
+\caption{Posterior $\beta$ matrix (domain $\times$ time interaction).\label{tab:beta}}
+\tabcolsep=0pt%
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lccccccccc@{\extracolsep{\fill}}}
+\toprule
+Domain & 0--1h & 1--3h & 3--6h & 6--12h & 12--24h & 24--48h & 2d--1w & 1w--1mo & 1mo+ \\
+\midrule
+Sports        & $+.082$ & $-.030$ & $-.066$ & $+.005$ & $+.032$ & $+.020$ & $-.081$ & $-.050$ & $+.088$ \\
+Crypto        & $+.013$ & $+.021$ & $+.051$ & $-.058$ & $-.051$ & $+.063$ & $-.106$ & $-.181$ & $+.249$ \\
+Politics      & $-.072$ & $-.173$ & $-.066$ & $+.069$ & $-.019$ & $+.028$ & $+.072$ & $+.170$ & $-.008$ \\
+Finance       & $+.027$ & $+.077$ & $+.027$ & $-.014$ & $-.006$ & $-.118$ & $-.003$ & $+.146$ & $-.135$ \\
+Weather       & $-.031$ & $-.040$ & $-.101$ & $-.022$ & $+.018$ & $+.044$ & $+.132$ & $-.088$ & $+.088$ \\
+Entertainment & $-.019$ & $+.144$ & $+.156$ & $+.021$ & $+.027$ & $-.036$ & $-.015$ & $+.004$ & $-.281$ \\
+\botrule
+\end{tabular*}
+\begin{tablenotes}%
+\item The $\beta$ matrix captures each domain's slope deviation from the universal horizon mean $\mu(\tau)$ plus the domain intercept $\alpha$.
+\end{tablenotes}
+\end{sidewaystable}
+
+\begin{table}[!t]
+\caption{Posterior predictive coverage by domain.\label{tab:ppc_domain}}%
+\begin{tabular*}{\columnwidth}{@{\extracolsep\fill}lcccc@{\extracolsep\fill}}
+\toprule
+Domain & Cells & Within 95\% & Coverage & Mean PPC $p$-value \\
+\midrule
+Sports        & 36 & 35 & 97.2\% & 0.48 \\
+Crypto        & 36 & 35 & 97.2\% & 0.49 \\
+Politics      & 36 & 33 & 91.7\% & 0.47 \\
+Finance       & 36 & 35 & 97.2\% & 0.50 \\
+Weather       & 36 & 35 & 97.2\% & 0.49 \\
+Entertainment & 36 & 35 & 97.2\% & 0.51 \\
+\botrule
+\end{tabular*}
+\end{table}
+\section{Cross-platform validation details}\label{app:crossplatform}
+
+This appendix provides full tabular results for the cross-platform comparison between Kalshi and Polymarket. Polymarket trade timestamps are derived from Polygon block numbers via a bucketed lookup table with approximately 6-hour granularity, introducing approximately 3 hours of noise. Bins 0--1 hour and 1--3 hours are therefore unreliable for cross-platform comparison and are excluded from mean slope calculations.
+
+\begin{table*}[!t]
+\caption{Cross-platform calibration slopes ($\Delta$ = Polymarket $-$ Kalshi). Bins marked $\dagger$ are unreliable due to timestamp noise.\label{tab:cross_slopes}}
+\tabcolsep=0pt%%
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lccclccclccc@{\extracolsep{\fill}}}
+\toprule
+& \multicolumn{3}{c}{Sports} && \multicolumn{3}{c}{Crypto} && \multicolumn{3}{c}{Politics} \\
+\cline{2-4}\cline{6-8}\cline{10-12}
+Bin & Kalshi & Poly & $\Delta$ && Kalshi & Poly & $\Delta$ && Kalshi & Poly & $\Delta$ \\
+\midrule
+0--1h$\dagger$  & 1.101 & 1.028 & $-0.073$ && 0.993 & 1.753 & $+0.760$ && 1.341 & 0.621 & $-0.720$ \\
+1--3h$\dagger$  & 0.960 & 0.976 & $+0.016$ && 1.013 & 1.390 & $+0.377$ && 0.933 & 0.859 & $-0.073$ \\
+3--6h           & 0.897 & 1.171 & $+0.275$ && 1.065 & 0.862 & $-0.203$ && 1.317 & 1.116 & $-0.201$ \\
+6--12h          & 1.006 & 1.001 & $-0.005$ && 1.007 & 1.044 & $+0.037$ && 1.552 & 0.936 & $-0.616$ \\
+12--24h         & 1.053 & 1.059 & $+0.006$ && 1.006 & 0.996 & $-0.009$ && 1.477 & 1.277 & $-0.200$ \\
+24--48h         & 1.075 & 0.950 & $-0.126$ && 1.209 & 1.123 & $-0.087$ && 1.515 & 1.234 & $-0.281$ \\
+2d--1w          & 1.037 & 1.097 & $+0.059$ && 1.121 & 0.998 & $-0.123$ && 1.833 & 1.982 & $+0.149$ \\
+1w--1mo         & 1.240 & 0.974 & $-0.266$ && 1.090 & 1.161 & $+0.071$ && 1.833 & 1.681 & $-0.152$ \\
+1mo+            & 1.740 & 1.322 & $-0.418$ && 1.357 & 1.060 & $-0.298$ && 1.730 & 1.086 & $-0.644$ \\
+\midrule
+Mean (rel.)     & 1.150 & 1.082 & $-0.068$ && 1.114 & 1.049 & $-0.065$ && 1.637 & 1.313 & $-0.324$ \\
+\botrule
+\end{tabular*}
+\begin{tablenotes}%
+\item \emph{Note:} Mean (rel.)\ is the trade-weighted mean slope across the seven reliable time bins (3--6h through 1mo+). Simple arithmetic means of the tabulated slopes differ slightly due to variation in per-bin trade counts.
+\end{tablenotes}
+\end{table*}
+
+\begin{table}[!t]
+\caption{Cross-platform scale effect by domain and trade size.\label{tab:cross_scale}}%
+\begin{tabular*}{\columnwidth}{@{\extracolsep\fill}llccccc@{\extracolsep\fill}}
+\toprule
+Domain & Platform & Single & Small & Medium & Large & $\Delta$(L$-$S) \\
+\midrule
+Sports   & Kalshi     & 1.002 & 1.010 & 1.007 & 1.013 & $+0.011$ \\
+Sports   & Polymarket & 1.120 & 1.036 & 1.065 & 1.038 & $-0.082$ \\
+Crypto   & Kalshi     & 1.028 & 1.025 & 1.023 & 1.004 & $-0.024$ \\
+Crypto   & Polymarket & 1.006 & 1.066 & 1.059 & 1.063 & $+0.057$ \\
+Politics & Kalshi     & 1.188 & 1.224 & 1.373 & 1.741 & $+0.554$ \\
+Politics & Polymarket & 1.193 & 1.046 & 1.381 & 1.373 & $+0.180$ \\
+\botrule
+\end{tabular*}
+\begin{tablenotes}%
+\item \emph{Note:} $\Delta$(L$-$S) is the difference between aggregate Large and Single slopes (pooled across all time bins). This differs from the bootstrap estimand in Equation~\eqref{eq:delta}, which averages within-horizon differences: Kalshi Politics aggregate $\Delta = +0.554$ vs within-horizon $\Delta = +0.531$; Polymarket Politics $+0.180$ vs $+0.113$.
+\end{tablenotes}
+\end{table}
+
+\begin{table}[!t]
+\caption{Cross-platform whale effect bootstrap.\label{tab:cross_bootstrap}}%
+\begin{tabular*}{\columnwidth}{@{\extracolsep\fill}llccc@{\extracolsep\fill}}
+\toprule
+Platform & Domain & $\Delta$(L$-$S) & 95\% CI & Sig.?\ \\
+\midrule
+Kalshi (cell)      & Politics & $+0.531$ & $[+0.288, +0.747]$ & Yes \\
+Kalshi (clustered) & Politics & $+0.589$ & $[+0.132, +1.289]$ & Yes \\
+Polymarket (cell)  & Politics & $+0.113$ & $[-0.151, +0.395]$ & No  \\
+Polymarket (cell)  & Sports   & $+0.006$ & $[-0.199, +0.170]$ & No  \\
+Polymarket (cell)  & Crypto   & $+0.092$ & $[-0.158, +0.358]$ & No  \\
+\botrule
+\end{tabular*}
+\end{table}
+The Polymarket Politics 2 days to 1 week bin (slope 1.982, 4.32 million trades) is a genuine outlier exceeding even the Kalshi value at the same horizon (1.833). This likely reflects a concentration of 2024 US election daily-resolution markets whose peak trading fell 2--7 days before resolution. Several limitations also merit note. The regex-based domain classifier assigns 42.5\% of Polymarket markets to ``Other''; Weather and Entertainment are absent; the count field represents contracts per on-chain transaction rather than full position size; and no market-clustered bootstrap has been run for Polymarket.
+\section{Additional supplementary appendices}\label{app:additional}
+
+The following materials are provided in the supplementary data. (a) Domain classification rules for both Kalshi (560+ ticker-prefix patterns) and Polymarket (compiled regular expression patterns on market titles); (b) the full 216-cell calibration matrix as a CSV file, with observed slopes, standard errors, fitted decomposition components and residuals; and (c) political subcategory analysis, including slope ranges for 10 subcategories and a Simpson's paradox diagnostic at the 1--3 hour horizon.
+
+\end{appendices}
+\end{document}
