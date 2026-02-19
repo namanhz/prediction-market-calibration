@@ -1,0 +1,20 @@
+output/
+data/
+__pycache__/
+*.pyc
+.env
+*.egg-info/
+.ruff_cache/
+*.nc
+.venv/
+
+# LaTeX build artifacts
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex
+*.synctex.gz
