@@ -1,0 +1,12 @@
+output/
+data/
+__pycache__/
+*.pyc
+.env
+*.egg-info/
+.ruff_cache/
+*.nc
+.venv/
+
+# Paper (not tracked)
+paper/
